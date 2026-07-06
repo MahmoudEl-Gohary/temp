@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VLM Report Evaluation Dashboard</title>
+  <meta name="description" content="Interactive dashboard for comparing radiology report generation models across Spine and Knee anatomical regions." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/index.css" />
+</head>
+<body>
+  <!-- Header -->
+  <header id="app-header">
+    <div class="header-left">
+      <h1>VLM Report Evaluation</h1>
+      <span class="header-subtitle">Model Comparison Dashboard</span>
+    </div>
+    <div class="header-right">
+      <div id="region-toggle" class="toggle-container">
+        <button class="toggle-btn active" data-region="spine">Spine</button>
+        <button class="toggle-btn" data-region="knee">Knee</button>
+        <div class="toggle-slider"></div>
+      </div>
+      <div id="sample-count" class="badge">-- samples</div>
+    </div>
+  </header>
+
+  <!-- Chart Tab Bar -->
+  <nav id="chart-tabs">
+    <button class="tab-btn active" data-tab="comparison">Comparison</button>
+    <button class="tab-btn" data-tab="distribution">Distribution</button>
+    <button class="tab-btn" data-tab="green">GREEN Errors</button>
+    <button class="tab-btn" data-tab="scatter">Scatter</button>
+    <button class="tab-btn" data-tab="ranking">Sample Ranking</button>
+    <button class="tab-btn" data-tab="radar">Radar</button>
+  </nav>
+
+  <!-- Controls Bar -->
+  <div id="controls-bar">
+    <div class="control-group">
+      <label for="model-select">Model</label>
+      <select id="model-select">
+        <option value="all">All Models</option>
+        <option value="base_qwen">Base Qwen</option>
+        <option value="medgemma">MedGemma</option>
+        <option value="zc_only">ZC Only</option>
+        <option value="rology_only">Rology Only</option>
+        <option value="zc_rology">ZC + Rology</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="metric-select">Metric</label>
+      <select id="metric-select">
+        <option value="green">GREEN Score</option>
+        <option value="rougeL">ROUGE-L</option>
+        <option value="rouge1">ROUGE-1</option>
+        <option value="rouge2">ROUGE-2</option>
+        <option value="bertscore">BERTScore</option>
+        <option value="radeval_bertscore">RadEval BERTScore</option>
+        <option value="ratescore">RATEScore</option>
+        <option value="bleu">BLEU</option>
+        <option value="temporal_f1">Temporal F1</option>
+      </select>
+    </div>
+    <div class="control-group" id="sort-control" style="display:none;">
+      <label for="sort-select">Sort</label>
+      <select id="sort-select">
+        <option value="asc">Worst First</option>
+        <option value="desc">Best First</option>
+      </select>
+    </div>
+    <div class="control-group" id="top-n-control" style="display:none;">
+      <label for="topn-select">Show</label>
+      <select id="topn-select">
+        <option value="50">Top 50</option>
+        <option value="100">Top 100</option>
+        <option value="all">All</option>
+      </select>
+    </div>
+
+    <!-- Scatter-specific controls -->
+    <div class="control-group" id="scatter-x-control" style="display:none;">
+      <label for="scatter-x-select">X-Axis</label>
+      <select id="scatter-x-select">
+        <option value="rougeL">ROUGE-L</option>
+        <option value="rouge1">ROUGE-1</option>
+        <option value="rouge2">ROUGE-2</option>
+        <option value="bleu">BLEU</option>
+        <option value="bertscore">BERTScore</option>
+        <option value="radeval_bertscore">RadEval BERT</option>
+        <option value="ratescore">RATEScore</option>
+        <option value="temporal_f1">Temporal F1</option>
+        <option value="green">GREEN</option>
+      </select>
+    </div>
+    <div class="control-group" id="scatter-y-control" style="display:none;">
+      <label for="scatter-y-select">Y-Axis</label>
+      <select id="scatter-y-select">
+        <option value="green">GREEN</option>
+        <option value="rougeL">ROUGE-L</option>
+        <option value="rouge1">ROUGE-1</option>
+        <option value="rouge2">ROUGE-2</option>
+        <option value="bleu">BLEU</option>
+        <option value="bertscore">BERTScore</option>
+        <option value="radeval_bertscore">RadEval BERT</option>
+        <option value="ratescore">RATEScore</option>
+        <option value="temporal_f1">Temporal F1</option>
+      </select>
+    </div>
+    <div class="control-group" id="scatter-filter-control" style="display:none;">
+      <label for="scatter-filter-select">Samples</label>
+      <select id="scatter-filter-select">
+        <option value="all">All</option>
+        <option value="worst50">Worst 50</option>
+        <option value="worst100">Worst 100</option>
+        <option value="best50">Best 50</option>
+        <option value="best100">Best 100</option>
+      </select>
+    </div>
+    <div class="control-group" id="scatter-sort-metric-control" style="display:none;">
+      <label for="scatter-sort-metric">Rank By</label>
+      <select id="scatter-sort-metric">
+        <option value="green">GREEN</option>
+        <option value="rougeL">ROUGE-L</option>
+        <option value="bertscore">BERTScore</option>
+        <option value="radeval_bertscore">RadEval BERT</option>
+        <option value="ratescore">RATEScore</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Chart Container -->
+  <main id="chart-area">
+    <div id="chart-container">
+      <canvas id="main-chart"></canvas>
+    </div>
+    <div id="table-container" style="display:none;"></div>
+  </main>
+
+  <!-- Loading Overlay -->
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    <p>Loading data...</p>
+  </div>
+
+  <!-- Sample Inspector Modal -->
+  <div id="sample-inspector" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">
+          <h2>Sample Inspector</h2>
+          <span id="inspector-id" class="mono-text"></span>
+        </div>
+        <div id="inspector-nav" class="inspector-nav" style="display:none;">
+          <button id="inspector-prev" class="nav-btn" aria-label="Previous sample">&larr;</button>
+          <span id="inspector-nav-label" class="nav-label">1 of 1</span>
+          <button id="inspector-next" class="nav-btn" aria-label="Next sample">&rarr;</button>
+        </div>
+        <div class="modal-controls">
+          <select id="inspector-model-select">
+            <option value="base_qwen">Base Qwen</option>
+            <option value="medgemma">MedGemma</option>
+            <option value="zc_only">ZC Only</option>
+            <option value="rology_only">Rology Only</option>
+            <option value="zc_rology">ZC + Rology</option>
+          </select>
+          <button id="modal-close" class="close-btn">&times;</button>
+        </div>
+      </div>
+      <div id="inspector-scores" class="score-bar"></div>
+      <div class="modal-body">
+        <div class="panel" id="panel-ground">
+          <h3>Ground Truth Report</h3>
+          <div class="panel-content" id="ground-text"></div>
+        </div>
+        <div class="panel" id="panel-prediction">
+          <h3>Model Prediction</h3>
+          <div class="panel-content" id="prediction-text"></div>
+        </div>
+      </div>
+      <div class="modal-analysis">
+        <h3>GREEN Analysis</h3>
+        <div id="green-error-badges"></div>
+        <div class="panel-content" id="green-analysis-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

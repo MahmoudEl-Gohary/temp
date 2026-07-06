@@ -1,0 +1,19 @@
+{
+  "name": "results_dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^8.1.0"
+  },
+  "dependencies": {
+    "chart.js": "^4.5.1",
+    "diff-match-patch": "^1.0.5",
+    "papaparse": "^5.5.4"
+  }
+}
